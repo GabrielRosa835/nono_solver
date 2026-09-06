@@ -1,16 +1,7 @@
 import { BoardLine, Board, Hint } from "./Board";
 import { CellSection } from "./CellSection";
 import { Cell, CellStatus } from "./Cell";
-
-export function log<T>(subject: T, suffix?: string): T {
-    if (suffix !== undefined) {
-        console.log(suffix, subject);
-    }
-    else {
-        console.log(subject);
-    }
-    return subject;
-}
+import { log } from "./helpers";
 
 export function tryCompleteLine(line: BoardLine) {
 
@@ -31,8 +22,7 @@ export function tryCompleteLine(line: BoardLine) {
 
 export function smartFillIntersections(line: BoardLine) {
 
-    const secs = BoardLine.split(line, CellStatus.Empty)
-        .filter(s => s.status !== CellStatus.Empty);
+    const secs = BoardLine.split(line, CellStatus.Empty).filter(s => s.status !== CellStatus.Empty);
 
     if (secs.length === 0) {
         return;
@@ -68,7 +58,7 @@ export function smartFillIntersections(line: BoardLine) {
 export function extractMinimalPositions(hints: Hint[], startIndex: number = 0): CellSection[] {
 
     let currStartIndex = startIndex;
-    let currEndIndex = hints[0] - 1;
+    let currEndIndex = startIndex + hints[0] - 1;
 
     const positions: CellSection[] = [{
         startIndex: currStartIndex,

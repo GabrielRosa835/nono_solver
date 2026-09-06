@@ -1,5 +1,6 @@
 import { Cell, CellStatus } from "./Cell";
 import { CellSection } from "./CellSection";
+import { log } from "./helpers";
 
 export type Hint = number;
 
@@ -23,35 +24,32 @@ export const BoardLine = {
     },
     split(line: BoardLine, byStatus?: CellStatus): CellSection[] {
 
-        let currSec: CellSection = {
-            startIndex: 0,
-            endIndex: 0,
-            size: 1,
-            status: line.cells[0].status,
-        };
+        let currStatus = line.cells[0].status;
+        let currStartIndex = 0;
+        let currEndIndex = 0;
 
         const positions: CellSection[] = [];
 
         for (let i = 1; i < line.cells.length; i++) {
+
             const currCell = line.cells[i];
-            if (byStatus !== undefined && currSec.status !== byStatus) {
-                currSec.endIndex++;
-                currSec.size++;
+
+            let shouldMerge = currStatus === currCell.status;
+
+            if (byStatus !== undefined && !shouldMerge) {
+                shouldMerge = currStatus !== byStatus && currCell.status !== byStatus;
             }
-            else if (currSec.status === currCell.status) {
-                currSec.endIndex++;
-                currSec.size++;
+
+            if (shouldMerge) {
+                currEndIndex++;
             } else {
-                positions.push(currSec);
-                currSec = {
-                    startIndex: currSec.endIndex + 1,
-                    endIndex: currSec.endIndex + 1,
-                    size: 1,
-                    status: currCell.status,
-                };
+                positions.push(CellSection.create(currStartIndex, currEndIndex, currStatus));
+                currStartIndex = currEndIndex + 1;
+                currEndIndex = currStartIndex;
+                currStatus = currCell.status;
             }
         }
-        positions.push(currSec);
+        positions.push(CellSection.create(currStartIndex, currEndIndex, currStatus));
 
         return positions;
     },
@@ -193,12 +191,19 @@ export const Board = {
         }
 
         for (let i = 0; i < bufferHeight; i++) {
-            let line = String(buffer[i][0] ?? ".");
+            let line = String(buffer[i][0] ?? " ");
             for (let j = 1; j < bufferWidth; j++) {
-                line += ` | ${String(buffer[i][j] ?? ".")}`
+                line += ` | ${String(buffer[i][j] ?? " ")}`
             }
             console.log(line);
         }
         console.log("\n")
     },
+    isCompleted(board: Board): boolean {
+        for(let i = 0; i < board.size; i++) {
+            if (!BoardLine.isCompleted(board.rows[i])) return false;
+            if (!BoardLine.isCompleted(board.cols[i])) return false;
+        }
+        return true;
+    }
 }

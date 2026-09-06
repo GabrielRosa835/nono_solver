@@ -17,8 +17,8 @@ export const CellStatus = {
     display(status: CellStatus): string {
         switch (status) {
             case CellStatus.Unknown: return ".";
-            case CellStatus.Filled: return "X";
-            case CellStatus.Empty: return "+";
+            case CellStatus.Filled: return "o";
+            case CellStatus.Empty: return "x";
             default: return "?";
         }
     },
