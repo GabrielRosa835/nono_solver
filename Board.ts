@@ -1,4 +1,5 @@
 import { Cell, CellStatus } from "./Cell";
+import { CellSection } from "./CellSection";
 
 export type Hint = number;
 
@@ -20,6 +21,65 @@ export const BoardLine = {
             hints: line.hints.map(c => c),
         };
     },
+    split(line: BoardLine, byStatus?: CellStatus): CellSection[] {
+
+        let currSec: CellSection = {
+            startIndex: 0,
+            endIndex: 0,
+            size: 1,
+            status: line.cells[0].status,
+        };
+
+        const positions: CellSection[] = [];
+
+        for (let i = 1; i < line.cells.length; i++) {
+            const currCell = line.cells[i];
+            if (byStatus !== undefined && currSec.status !== byStatus) {
+                currSec.endIndex++;
+                currSec.size++;
+            }
+            else if (currSec.status === currCell.status) {
+                currSec.endIndex++;
+                currSec.size++;
+            } else {
+                positions.push(currSec);
+                currSec = {
+                    startIndex: currSec.endIndex + 1,
+                    endIndex: currSec.endIndex + 1,
+                    size: 1,
+                    status: currCell.status,
+                };
+            }
+        }
+        positions.push(currSec);
+
+        return positions;
+    },
+    isCompleted(line: BoardLine): boolean {
+        const secs = BoardLine.split(line).filter(s => s.status === CellStatus.Filled);
+        let completed = true;
+        for (let i = 0; i < secs.length; i++) {
+            if (line.hints[i] !== secs[i].size) {
+                completed = false;
+                break;
+            }
+        }
+        return completed;
+    },
+    cellsAt(line: BoardLine, sec: CellSection): Cell[] {
+        if (sec.endIndex > line.cells.length) {
+            throw new Error("Section does not fit inside the board-line");
+        }
+        return line.cells.filter((_, i) => sec.startIndex <= i && i <= sec.endIndex);
+    },
+    print(line: BoardLine, hintPadding?: number) {
+        let hints = line.hints.join(", ");
+        if (hintPadding !== undefined && hintPadding > 1) {
+            hints = hints.padStart(((hintPadding - 1) * 3) + 1, " ");
+        }
+        const cells = line.cells.map(Cell.display).join(" | ");
+        console.log(`${hints} : ${cells}`);
+    }
 }
 
 export type Board = {

@@ -1,5 +1,5 @@
-import { Board, BoardTemplate } from "./Board";
-import { completeLines, fillIntersections } from "./solver";
+import { Board, BoardLine, BoardTemplate } from "./Board";
+import { completeLines, fillIntersections, smartFillIntersections } from "./solver";
 
 /*       2 1
  *   4 5 2 2 1
@@ -17,14 +17,6 @@ const example: BoardTemplate = {
 }
 
 const board = Board.create(example);
-
-Board.print(board);
-
-fillIntersections(board);
-
-Board.print(board);
-
-completeLines(board);
 
 Board.print(board);
 

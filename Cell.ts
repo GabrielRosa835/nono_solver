@@ -22,6 +22,14 @@ export const CellStatus = {
             default: return "?";
         }
     },
+    name(status: CellStatus): string {
+        switch (status) {
+            case CellStatus.Unknown: return "unknown";
+            case CellStatus.Filled: return "filled";
+            case CellStatus.Empty: return "empty";
+            default: return "none";
+        }
+    }
 }
 
 export type Cell = {

@@ -2,146 +2,72 @@ import { BoardLine, Board, Hint } from "./Board";
 import { CellSection } from "./CellSection";
 import { Cell, CellStatus } from "./Cell";
 
-export function log<T>(subject: T): T {
-    console.log(subject);
-    return subject;
-}
-
-export function groupSections(line: BoardLine): CellSection[] {
-
-    let currSec: CellSection = {
-        startIndex: 0,
-        endIndex: 0,
-        size: 1,
-        status: line.cells[0].status,
-    };
-
-    const positions: CellSection[] = [];
-
-    for (let i = 1; i < line.cells.length; i++) {
-        const currCell = line.cells[i];
-        if (currSec.status === currCell.status) {
-            currSec.endIndex++;
-            currSec.size++;
-        } else {
-            positions.push(currSec);
-            currSec = {
-                startIndex: currSec.endIndex + 1,
-                endIndex: currSec.endIndex + 1,
-                size: 1,
-                status: currCell.status,
-            };
-        }
+export function log<T>(subject: T, suffix?: string): T {
+    if (suffix !== undefined) {
+        console.log(suffix, subject);
     }
-    positions.push(currSec);
-
-    return positions;
+    else {
+        console.log(subject);
+    }
+    return subject;
 }
 
 export function tryCompleteLine(line: BoardLine) {
 
-    if (!isLineCompleted(line)) return;
+    if (!BoardLine.isCompleted(line)) return;
 
-    const secs = groupSections(line);
+    const secs = BoardLine.split(line);
     let secIndex = 0;
 
-    for(let i = 0; i < line.cells.length; i++) {
-        const cell = line.cells[i];
-        const sec = secs[secIndex];
-        if (sec.status === CellStatus.Unknown) {
-            cell.status = CellStatus.Empty;
-        }
-        else {
-            cell.status = sec.status;
-        }
-        if (i >= sec.endIndex) {
+    for (let i = 0; i < line.cells.length; i++) {
+        line.cells[i].status = secs[secIndex].status === CellStatus.Unknown
+            ? CellStatus.Empty
+            : secs[secIndex].status;
+        if (i >= secs[secIndex].endIndex) {
             secIndex++;
         }
     }
 }
 
-export function completeLines(board: Board) {
-    for (let i = 0; i < board.size; i++) {
-        tryCompleteLine(board.rows[i]);
-        tryCompleteLine(board.cols[i]);
-    }
-}
+export function smartFillIntersections(line: BoardLine) {
 
-export function fillIntersections(board: Board) {
-    for (let i = 0; i < board.size; i++) {
-        fillLineIntersections(board.rows[i]);
-        fillLineIntersections(board.cols[i]);
-    }
-}
+    const secs = BoardLine.split(line, CellStatus.Empty)
+        .filter(s => s.status !== CellStatus.Empty);
 
-export function isLineCompleted(line: BoardLine): boolean {
-    const secs = groupSections(line).filter(s => s.status === CellStatus.Filled);
-    let completed = false;
-    for(let i = 0; i < secs.length; i++) {
-        const hint = line.hints[i];
-        const sec = secs[i];
-        if (hint !== undefined && hint === sec.size) {
-            completed = true;
+    if (secs.length === 0) {
+        return;
+    }
+
+    let currHintIndex = 0;
+
+    for (let i = 0; i < secs.length; i++) {
+        const hints = [line.hints[currHintIndex]];
+        let hintsSpaceTaken = line.hints[currHintIndex];
+
+        while (++currHintIndex < line.hints.length) {
+            const nextSpace = line.hints[currHintIndex] + 1;
+            if (hintsSpaceTaken + nextSpace > secs[i].size) {
+                break;
+            }
+            hintsSpaceTaken += nextSpace;
+            hints.push(line.hints[currHintIndex]);
         }
-        else {
-            completed = false;
-        }
-    }
-    return completed;
-}
 
-export function smartExtractLineMinimalPositions(line: BoardLine): CellSection[] {
+        const maxDiff = secs[i].size - hintsSpaceTaken;
 
-    const usefulSecs = groupSections(line).filter(s => s.status !== CellStatus.Empty);
-    const mergedSecs: CellSection[] = [];
+        const minimalPos = extractMinimalPositions(hints, secs[i].startIndex);
 
-    for (let i = 0; i < usefulSecs.length - 1; i++) {
-        if (usefulSecs[i].endIndex === usefulSecs[i + 1].startIndex - 1) {
-            mergedSecs.push({
-                startIndex: 0,
-                size: 0,
-                endIndex: 0,
-                status: 0,
-            });
-        }
-    }
-
-}
-
-export function extractMinimalPosition(hint: number, sec: CellSection): CellSection<CellStatus.Filled> | null {
-
-    const maxLeftOver = sec.size - hint;
-
-    if (sec.status === CellStatus.Empty || maxLeftOver < 0 || maxLeftOver > hint) {
-        return null;
-    }
-
-    const startIndex = sec.startIndex + maxLeftOver;
-    const endIndex = sec.endIndex - maxLeftOver;
-
-    return {
-        startIndex: startIndex,
-        endIndex: endIndex,
-        size: endIndex - startIndex + 1,
-        status: CellStatus.Filled,
-    };
-}
-
-export function fillLineIntersections(line: BoardLine) {
-    const rowHintsSum = line.hints.reduce((prev, curr) => prev + curr);
-    const totalSpaceTaken = rowHintsSum + line.hints.length - 1;
-    const maximumDifference = line.cells.length - totalSpaceTaken;
-    const minimalPos = extractMinimalPositions(line.hints);
-    for (let j = 0; j < minimalPos.length; j++) {
-        for (let k = minimalPos[j].startIndex + maximumDifference; k <= minimalPos[j].endIndex; k++) {
-            line.cells[k].status = CellStatus.Filled;
+        for (let j = 0; j < minimalPos.length; j++) {
+            for (let k = minimalPos[j].startIndex + maxDiff; k <= minimalPos[j].endIndex; k++) {
+                line.cells[k].status = CellStatus.Filled;
+            }
         }
     }
 }
 
-export function extractMinimalPositions(hints: Hint[]): CellSection[] {
+export function extractMinimalPositions(hints: Hint[], startIndex: number = 0): CellSection[] {
 
-    let currStartIndex = 0;
+    let currStartIndex = startIndex;
     let currEndIndex = hints[0] - 1;
 
     const positions: CellSection[] = [{
@@ -164,4 +90,18 @@ export function extractMinimalPositions(hints: Hint[]): CellSection[] {
     }
 
     return positions;
+}
+
+export function completeLines(board: Board) {
+    for (let i = 0; i < board.size; i++) {
+        tryCompleteLine(board.cols[i]);
+        tryCompleteLine(board.rows[i]);
+    }
+}
+
+export function fillIntersections(board: Board) {
+    for (let i = 0; i < board.size; i++) {
+        smartFillIntersections(board.cols[i]);
+        smartFillIntersections(board.rows[i]);
+    }
 }
