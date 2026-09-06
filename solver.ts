@@ -1,10 +1,17 @@
-import { BoardLine, CellSection, CellStatus, Board } from "./types";
+import { BoardLine, Board, Hint } from "./Board";
+import { CellSection } from "./CellSection";
+import { Cell, CellStatus } from "./Cell";
+
+export function log<T>(subject: T): T {
+    console.log(subject);
+    return subject;
+}
 
 export function groupSections(line: BoardLine): CellSection[] {
 
-    let currSec: CellSection = { 
-        startIndex: 0, 
-        endIndex: 0, 
+    let currSec: CellSection = {
+        startIndex: 0,
+        endIndex: 0,
         size: 1,
         status: line.cells[0].status,
     };
@@ -19,8 +26,8 @@ export function groupSections(line: BoardLine): CellSection[] {
         } else {
             positions.push(currSec);
             currSec = {
-                startIndex: currSec.endIndex + 1, 
-                endIndex: currSec.endIndex + 1, 
+                startIndex: currSec.endIndex + 1,
+                endIndex: currSec.endIndex + 1,
                 size: 1,
                 status: currCell.status,
             };
@@ -83,41 +90,78 @@ export function isLineCompleted(line: BoardLine): boolean {
     return completed;
 }
 
-export function extractMinimalPositions(line: BoardLine): CellSection[] {
+export function smartExtractLineMinimalPositions(line: BoardLine): CellSection[] {
 
-    let currStartIndex = 0;
-    let currEndIndex = line.hints[0] - 1;
+    const usefulSecs = groupSections(line).filter(s => s.status !== CellStatus.Empty);
+    const mergedSecs: CellSection[] = [];
 
-    const positions: CellSection[] = [{ 
-        startIndex: currStartIndex, 
-        endIndex: currEndIndex, 
-        size: currEndIndex - currStartIndex + 1,
-        status: CellStatus.Unknown,
-    }];
-
-    for (let i = 1; i < line.hints.length; i++) {
-        currStartIndex = currStartIndex + line.hints[i - 1] + 1;
-        currEndIndex = currStartIndex + line.hints[i] - 1;
-
-        positions.push({ 
-            startIndex: currStartIndex, 
-            endIndex: currEndIndex, 
-            size: currEndIndex - currStartIndex + 1,
-            status: CellStatus.Unknown,
-        });
+    for (let i = 0; i < usefulSecs.length - 1; i++) {
+        if (usefulSecs[i].endIndex === usefulSecs[i + 1].startIndex - 1) {
+            mergedSecs.push({
+                startIndex: 0,
+                size: 0,
+                endIndex: 0,
+                status: 0,
+            });
+        }
     }
-    
-    return positions;
+
+}
+
+export function extractMinimalPosition(hint: number, sec: CellSection): CellSection<CellStatus.Filled> | null {
+
+    const maxLeftOver = sec.size - hint;
+
+    if (sec.status === CellStatus.Empty || maxLeftOver < 0 || maxLeftOver > hint) {
+        return null;
+    }
+
+    const startIndex = sec.startIndex + maxLeftOver;
+    const endIndex = sec.endIndex - maxLeftOver;
+
+    return {
+        startIndex: startIndex,
+        endIndex: endIndex,
+        size: endIndex - startIndex + 1,
+        status: CellStatus.Filled,
+    };
 }
 
 export function fillLineIntersections(line: BoardLine) {
     const rowHintsSum = line.hints.reduce((prev, curr) => prev + curr);
     const totalSpaceTaken = rowHintsSum + line.hints.length - 1;
     const maximumDifference = line.cells.length - totalSpaceTaken;
-    const minimalPos = extractMinimalPositions(line);
+    const minimalPos = extractMinimalPositions(line.hints);
     for (let j = 0; j < minimalPos.length; j++) {
         for (let k = minimalPos[j].startIndex + maximumDifference; k <= minimalPos[j].endIndex; k++) {
             line.cells[k].status = CellStatus.Filled;
         }
     }
+}
+
+export function extractMinimalPositions(hints: Hint[]): CellSection[] {
+
+    let currStartIndex = 0;
+    let currEndIndex = hints[0] - 1;
+
+    const positions: CellSection[] = [{
+        startIndex: currStartIndex,
+        endIndex: currEndIndex,
+        size: currEndIndex - currStartIndex + 1,
+        status: CellStatus.Unknown,
+    }];
+
+    for (let i = 1; i < hints.length; i++) {
+        currStartIndex = currStartIndex + hints[i - 1] + 1;
+        currEndIndex = currStartIndex + hints[i] - 1;
+
+        positions.push({
+            startIndex: currStartIndex,
+            endIndex: currEndIndex,
+            size: currEndIndex - currStartIndex + 1,
+            status: CellStatus.Unknown,
+        });
+    }
+
+    return positions;
 }

@@ -1,6 +1,5 @@
-import { createBoard, printBoard } from "./helpers";
+import { Board, BoardTemplate } from "./Board";
 import { completeLines, fillIntersections } from "./solver";
-import { Example } from "./types";
 
 /*       2 1
  *   4 5 2 2 1
@@ -11,24 +10,24 @@ import { Example } from "./types";
  * 3 . . . . .
  */
 
-const example: Example = {
+const example: BoardTemplate = {
     size: 5,
     rowHints: [[4], [3], [2], [5], [3]],
     colHints: [[4], [5], [2, 2], [1, 2], [1]],
 }
 
-const board = createBoard(example);
+const board = Board.create(example);
 
-printBoard(board);
+Board.print(board);
 
 fillIntersections(board);
 
-printBoard(board);
+Board.print(board);
 
 completeLines(board);
 
-printBoard(board);
+Board.print(board);
 
 fillIntersections(board);
 
-printBoard(board);
+Board.print(board);
