@@ -95,3 +95,13 @@ export function fillIntersections(board: Board) {
         smartFillIntersections(board.rows[i]);
     }
 }
+
+export function solveIterating(board: Board, maxIterations: number = 5) {
+    for(let i = 0; i < maxIterations; i++) {
+        fillIntersections(board);      
+        completeLines(board);
+        if (Board.isCompleted(board)) {
+            break;
+        }
+    }
+}
