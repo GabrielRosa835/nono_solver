@@ -1,7 +1,8 @@
-import { BoardLine, Board, Hint } from "./Board";
+import { Board } from "./Board";
+import { BoardLine } from "./BoardLine";
+import { Hint } from "./Hint";
 import { CellSection } from "./CellSection";
-import { Cell, CellStatus } from "./Cell";
-import { log } from "./helpers";
+import { CellStatus } from "./CellStatus";
 
 export function tryCompleteLine(line: BoardLine) {
 
@@ -20,6 +21,32 @@ export function tryCompleteLine(line: BoardLine) {
     }
 }
 
+export function basicFillIntersections(line: BoardLine) {
+    const secs = BoardLine.split(line, CellStatus.Empty).filter(s => s.status !== CellStatus.Empty);
+
+    if (secs.length !== 1) return;
+
+    let currHintIndex = 0;
+    const hints = [line.hints[currHintIndex]];
+    let hintsSpaceTaken: number = line.hints[currHintIndex];
+
+    while (++currHintIndex < line.hints.length) {
+        const nextSpace = line.hints[currHintIndex] + 1;
+        if (hintsSpaceTaken + nextSpace > secs[0].size) break;
+        hintsSpaceTaken += nextSpace;
+        hints.push(line.hints[currHintIndex]);
+    }
+
+    const maxDiff = secs[0].size - hintsSpaceTaken;
+    const minimalPos = extractMinimalPositions(hints, secs[0].startIndex);
+
+    for (let j = 0; j < minimalPos.length; j++) {
+        for (let k = minimalPos[j].startIndex + maxDiff; k <= minimalPos[j].endIndex; k++) {
+            line.cells[k].status = CellStatus.Filled;
+        }
+    }
+}
+
 export function smartFillIntersections(line: BoardLine) {
 
     const secs = BoardLine.split(line, CellStatus.Empty).filter(s => s.status !== CellStatus.Empty);
@@ -31,8 +58,10 @@ export function smartFillIntersections(line: BoardLine) {
     let currHintIndex = 0;
 
     for (let i = 0; i < secs.length; i++) {
+        if (currHintIndex >= line.hints.length) break;
+
         const hints = [line.hints[currHintIndex]];
-        let hintsSpaceTaken = line.hints[currHintIndex];
+        let hintsSpaceTaken: number = line.hints[currHintIndex];
 
         while (++currHintIndex < line.hints.length) {
             const nextSpace = line.hints[currHintIndex] + 1;

@@ -1,4 +1,4 @@
-import { CellStatus } from "./Cell";
+import { CellStatus } from "./CellStatus";
 
 export type CellSection = {
     startIndex: number;
