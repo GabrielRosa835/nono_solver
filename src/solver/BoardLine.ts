@@ -10,6 +10,60 @@ export type BoardLine = {
 
 export namespace BoardLine {
 
+    export function getMinimalPositionsFromStart(hints: Hint[], startIndex: number = 0): CellSection[] {
+
+        let currStartIndex = startIndex;
+        let currEndIndex = startIndex + hints[0] - 1;
+
+        const positions: CellSection[] = [{
+            startIndex: currStartIndex,
+            endIndex: currEndIndex,
+            size: currEndIndex - currStartIndex + 1,
+            status: CellStatus.Unknown,
+        }];
+
+        for (let i = 1; i < hints.length; i++) {
+            currStartIndex = currStartIndex + hints[i - 1] + 1;
+            currEndIndex = currStartIndex + hints[i] - 1;
+
+            positions.push({
+                startIndex: currStartIndex,
+                endIndex: currEndIndex,
+                size: currEndIndex - currStartIndex + 1,
+                status: CellStatus.Unknown,
+            });
+        }
+
+        return positions;
+    }
+
+    export function getMinimalPositionsFromEnd(hints: Hint[], endIndex: number): CellSection[] {
+        
+        let currEndIndex = endIndex;
+        let currStartIndex = endIndex - hints[hints.length - 1] + 1;
+
+        const positions: CellSection[] = [{
+            startIndex: currStartIndex,
+            endIndex: currEndIndex,
+            size: currEndIndex - currStartIndex + 1,
+            status: CellStatus.Unknown,
+        }];
+
+        for (let i = hints.length - 2; i >= 0; i--) {
+            currEndIndex = currEndIndex - hints[i + 1] - 1;
+            currStartIndex = currEndIndex - hints[i] + 1;
+
+            positions.unshift({
+                startIndex: currStartIndex,
+                endIndex: currEndIndex,
+                size: currEndIndex - currStartIndex + 1,
+                status: CellStatus.Unknown,
+            });
+        }
+
+        return positions;
+    }
+
     export function createRows(hints: number[][], cells: Cell[]): BoardLine[] {
         return hints.map((rowTempl, rowIndex) => {
             const line: BoardLine = { hints: rowTempl.map(Hint.of) } as BoardLine;
@@ -72,13 +126,13 @@ export namespace BoardLine {
 
     export function isCompleted(line: BoardLine): boolean {
         const secs = BoardLine.split(line).filter(s => s.status === CellStatus.Filled);
-        
+
         if (secs.length !== line.hints.length) return false;
 
         for (let i = 0; i < secs.length; i++) {
             if (line.hints[i] !== secs[i].size) return false;
         }
-        
+
         return true;
     }
 
