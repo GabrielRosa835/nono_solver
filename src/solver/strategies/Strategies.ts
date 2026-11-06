@@ -16,7 +16,7 @@ export namespace Strategies {
     /**
      * Orchestrator that runs multiple strategies continuously until the board is completed or stalled.
      */
-    function* Orchestrator(board: Board, strategies: Strategy[]): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void> {
+    export function* Orchestrator(board: Board, strategies: Strategy[]): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void> {
         while (!Board.isCompleted(board)) {
             let changedInIteration = false;
 

@@ -13,9 +13,8 @@ export namespace Cell {
         return CellStatus.display(cell.status);
     }
 
-    export function inRow({ rowIndex, cellIndex }: InRowArgs): boolean {
-        const rowIndexing = cellIndex / rowIndex;
-        return rowIndex < rowIndexing && rowIndexing < rowIndex + 1
+    export function inRow({ rowIndex, cellIndex, rowSize }: InRowArgs): boolean {
+        return Math.floor(cellIndex / rowSize) === rowIndex;
     }
 
     export function inCol({ colIndex, cellIndex, colCount }: InColArgs): boolean {
@@ -27,6 +26,7 @@ export namespace Cell {
 type InRowArgs = {
     rowIndex: number;
     cellIndex: number;
+    rowSize: number;
 };
 
 type InColArgs = {

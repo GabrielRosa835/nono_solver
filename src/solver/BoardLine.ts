@@ -68,7 +68,7 @@ export namespace BoardLine {
         return hints.map((rowTempl, rowIndex) => {
             const line: BoardLine = { hints: rowTempl.map(Hint.of) } as BoardLine;
             line.cells = cells.filter((cell, cellIndex) => {
-                if (Cell.inRow({ rowIndex, cellIndex })) {
+                if (Cell.inRow({ rowIndex, cellIndex, rowSize: hints.length })) {
                     cell.row = line;
                     return true;
                 }
@@ -137,7 +137,7 @@ export namespace BoardLine {
     }
 
     export function cellsAt(line: BoardLine, sec: CellSection): Cell[] {
-        if (sec.endIndex > line.cells.length) {
+        if (sec.endIndex >= line.cells.length) {
             throw new Error("Section does not fit inside the board-line");
         }
         return line.cells.filter((_, i) => sec.startIndex <= i && i <= sec.endIndex);

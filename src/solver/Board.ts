@@ -20,13 +20,28 @@ export namespace Board {
 
         const totalCells = Math.pow(template.size, 2);
 
-        const cells: Cell[] = Array(totalCells).map(() => ({ status: CellStatus.Unknown } as Cell));
+        const cells: Cell[] = Array.from({ length: totalCells }, () => ({ status: CellStatus.Unknown } as Cell));
 
         const board: Board = { size: template.size } as Board;
         board.rows = BoardLine.createRows(template.rows, cells);
         board.cols = BoardLine.createCols(template.cols, cells);
 
         return board;
+    }
+
+    export function clone(source: Board): Board {
+        const template: BoardTemplate = {
+            size: source.size,
+            rows: source.rows.map(r => r.hints.map(Number)),
+            cols: source.cols.map(c => c.hints.map(Number)),
+        };
+        const next = Board.create(template);
+        for (let r = 0; r < source.size; r++) {
+            for (let c = 0; c < source.size; c++) {
+                next.rows[r].cells[c].status = source.rows[r].cells[c].status;
+            }
+        }
+        return next;
     }
 
     export function print(board: Board) {

@@ -1,0 +1,8 @@
+Now we're going to work on the UI of our project. I've implemented some Strategies as documented in @[docs/sessions/2026-10-02_Strategy_Implementation] and I believe we could plan
+  out our main page. The interface itself should be a single page, in which the board could be completely editable in order to build any valid nonogram. This means a variable range of
+  integer sizes, each cell could have one of its three states, "Filled", "Empty" or "Unknown", where
+Continuing... where "Unknown" is represented by a clear cell, "Filled" by a filled cell and "Empty" by a cross inside a clear cell. To edit the cell states, the user clicks on each
+  cell and the new state of the cell is dependant on the current cell status togheter with a switch at the bottom of the board. Such switch allows changing between 'Filling' mode and
+  'Empty' mode. While in 'Filling' mode, clicking on a 'Filled' cell turns it into 'Unknown', and other states get turned into 'Filled'. While in 'Empty' mode, clicking on an 'Empty'
+  cell turns it into 'Unknown', and other states get turned into 'Empty'. Each row or column start, there should be two buttons, a 'minus' and a 'plus', that respectively removes the
+  last hint of

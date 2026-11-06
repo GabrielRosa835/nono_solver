@@ -42,7 +42,7 @@ export const CellSection = {
     },
     merge(first: CellSection, second: CellSection): CellSection {
         if (first.status !== second.status) {
-            throw new Error(`Sections with different statuses cannot be merged (${CellStatus.name(first.status)}, ${CellStatus.name(second.status)})`);
+            throw new Error(`Sections with different statuses cannot be merged (${CellStatus.detail(first.status)}, ${CellStatus.detail(second.status)})`);
         }
         return CellSection.create(
             Math.min(first.startIndex, second.startIndex), 
