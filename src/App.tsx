@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { NonogramBoard } from './components/NonogramBoard';
 import { Board, type BoardTemplate } from './solver/Board';
+import { BoardLine } from './solver/BoardLine';
 import { CellStatus } from './solver/CellStatus';
 import { Examples } from './solver/Examples';
 import { Hint } from './solver/Hint';
@@ -113,10 +114,7 @@ function App() {
         selectedStrategyIds.includes(s.id),
       ).map((s) => s.strategy);
 
-      iteratorRef.current =
-        activeStrategies.length === 1
-          ? activeStrategies[0](working)
-          : Strategies.Orchestrator(working, activeStrategies);
+      iteratorRef.current = Strategies.Orchestrator(working, activeStrategies);
     }
 
     const res = iteratorRef.current.next();
@@ -176,7 +174,7 @@ function App() {
     setBoard((prev) => {
       const next = Board.clone(prev);
       const targetLine = axis === 'row' ? next.rows[lineIndex] : next.cols[lineIndex];
-      if (targetLine.hints.length < next.size) {
+      if (BoardLine.canAddHint(targetLine.hints, next.size)) {
         targetLine.hints.push(Hint.of(1));
       }
       return next;
@@ -205,7 +203,8 @@ function App() {
     setBoard((prev) => {
       const next = Board.clone(prev);
       const targetLine = axis === 'row' ? next.rows[lineIndex] : next.cols[lineIndex];
-      const clamped = Math.max(1, Math.min(next.size, Math.floor(newValue)));
+      const maxAllowed = BoardLine.getMaxHintValue(targetLine.hints, hintIndex, next.size);
+      const clamped = Math.max(1, Math.min(maxAllowed, Math.floor(newValue)));
       targetLine.hints[hintIndex] = Hint.of(clamped);
       return next;
     });

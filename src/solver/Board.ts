@@ -44,6 +44,34 @@ export namespace Board {
         return next;
     }
 
+    export type ValidationResult =
+        | { valid: true }
+        | { valid: false; reason: string; axis: 'row' | 'col'; index: number };
+
+    export function validateHints(board: Board): ValidationResult {
+        for (let r = 0; r < board.rows.length; r++) {
+            if (BoardLine.getRequiredSpace(board.rows[r].hints) > board.size) {
+                return {
+                    valid: false,
+                    reason: `Hints exceed line length on row ${r + 1}`,
+                    axis: 'row',
+                    index: r,
+                };
+            }
+        }
+        for (let c = 0; c < board.cols.length; c++) {
+            if (BoardLine.getRequiredSpace(board.cols[c].hints) > board.size) {
+                return {
+                    valid: false,
+                    reason: `Hints exceed line length on column ${c + 1}`,
+                    axis: 'col',
+                    index: c,
+                };
+            }
+        }
+        return { valid: true };
+    }
+
     export function print(board: Board) {
 
         let maxColHintSize = 1;

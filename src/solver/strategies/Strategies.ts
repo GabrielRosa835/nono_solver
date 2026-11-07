@@ -17,6 +17,11 @@ export namespace Strategies {
      * Orchestrator that runs multiple strategies continuously until the board is completed or stalled.
      */
     export function* Orchestrator(board: Board, strategies: Strategy[]): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void> {
+        const validation = Board.validateHints(board);
+        if (!validation.valid) {
+            return StrategyResult.faulted("Orchestrator", `Board is in an invalid state: ${validation.reason}.`);
+        }
+
         while (!Board.isCompleted(board)) {
             let changedInIteration = false;
 

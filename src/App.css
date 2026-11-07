@@ -144,9 +144,19 @@
 }
 
 .board-scroll-container {
+  width: 100%;
   max-width: 100%;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.board-viewport {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 /* Nonogram Grid */
@@ -156,6 +166,7 @@
   background: var(--border);
   gap: 1px;
   user-select: none;
+  max-width: 100%;
 }
 
 .board-row-contents {
@@ -181,16 +192,20 @@
 .line-header--col {
   flex-direction: column;
   justify-content: space-between;
-  min-width: var(--cell-size);
+  width: var(--cell-size);
+  min-width: 0;
   min-height: 88px;
+  padding: 2px;
   border-bottom: 2px solid var(--border-strong);
 }
 
 .line-header--row {
   flex-direction: row;
   justify-content: space-between;
-  min-height: var(--cell-size);
-  min-width: 108px;
+  height: var(--cell-size);
+  min-height: 0;
+  min-width: 80px;
+  padding: 2px 4px;
   border-right: 2px solid var(--border-strong);
 }
 
@@ -203,6 +218,19 @@
   display: inline-flex;
   gap: 2px;
   flex-shrink: 0;
+}
+
+.line-actions--row {
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  align-items: center;
+}
+
+.line-actions--col {
+  width: 100%;
+  justify-content: center;
+  align-items: center;
 }
 
 .line-action-btn {
@@ -221,6 +249,20 @@
   border: 1px solid var(--border);
   border-radius: 3px;
   cursor: pointer;
+}
+
+.line-actions--row .line-action-btn {
+  width: 14px;
+  height: 12px;
+  font-size: 10px;
+}
+
+.line-actions--col .line-action-btn {
+  width: calc(var(--cell-size) * 0.42);
+  min-width: 11px;
+  max-width: 16px;
+  height: 14px;
+  font-size: 10px;
 }
 
 .line-action-btn:hover:not(:disabled) {
@@ -243,12 +285,15 @@
 .hint-list--col {
   flex-direction: column;
   justify-content: flex-end;
+  align-items: center;
+  width: 100%;
   flex: 1;
 }
 
 .hint-list--row {
   flex-direction: row;
   justify-content: flex-end;
+  align-items: center;
   flex: 1;
 }
 
@@ -257,9 +302,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 22px;
-  padding: 0 3px;
+  min-width: calc(var(--cell-size) * 0.7);
+  max-width: 100%;
+  height: max(18px, calc(var(--cell-size) * 0.65));
+  padding: 0 2px;
   border-radius: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -274,16 +320,20 @@
 .hint-chip--focused {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-bg);
-  z-index: 2;
+  z-index: 10;
+  position: relative;
+  min-width: 48px;
 }
 
 .hint-input {
-  width: 20px;
+  width: 100%;
+  min-width: 14px;
+  max-width: 22px;
   border: none;
   background: transparent;
   text-align: center;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: clamp(10px, calc(var(--cell-size) * 0.45), 13px);
   font-weight: 700;
   color: var(--text-h);
   padding: 0;
@@ -356,7 +406,7 @@
 }
 
 .cell-cross {
-  font-size: 22px;
+  font-size: calc(var(--cell-size) * 0.72);
   font-weight: 700;
   line-height: 1;
   color: var(--cell-cross);

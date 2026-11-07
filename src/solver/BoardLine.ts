@@ -143,6 +143,23 @@ export namespace BoardLine {
         return line.cells.filter((_, i) => sec.startIndex <= i && i <= sec.endIndex);
     }
 
+    export function getRequiredSpace(hints: Hint[] | number[]): number {
+        if (hints.length === 0) return 0;
+        return hints.reduce((acc, h) => acc + Number(h), 0) + hints.length - 1;
+    }
+
+    export function canAddHint(hints: Hint[] | number[], lineLength: number): boolean {
+        const currentSum = hints.reduce((acc, h) => acc + Number(h), 0);
+        const newRequiredSpace = currentSum + 1 + hints.length;
+        return newRequiredSpace <= lineLength;
+    }
+
+    export function getMaxHintValue(hints: Hint[] | number[], hintIndex: number, lineLength: number): number {
+        const otherHintsSum = hints.reduce((acc, h, i) => (i === hintIndex ? acc : acc + Number(h)), 0);
+        const separators = hints.length - 1;
+        return Math.max(1, lineLength - otherHintsSum - separators);
+    }
+
     export function print(line: BoardLine, hintPadding?: number) {
         let hints = line.hints.join(", ");
         if (hintPadding !== undefined && hintPadding > 1) {
