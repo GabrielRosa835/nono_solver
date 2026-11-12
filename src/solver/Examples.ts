@@ -1,4 +1,4 @@
-import { type BoardTemplate } from "./Board";
+import { type BoardTemplate } from "./BoardTemplate";
 
 export namespace Examples {
     /**

@@ -1,274 +1,36 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
-import { NonogramBoard } from './components/NonogramBoard';
-import { Board, type BoardTemplate } from './solver/Board';
-import { BoardLine } from './solver/BoardLine';
-import { CellStatus } from './solver/CellStatus';
+import { AvailableStrategies } from './AvailableStrategies';
+import { NonogramBoard } from './components/NonogramBoard/NonogramBoard';
+import { BoardTemplate } from "./solver/BoardTemplate";
 import { Examples } from './solver/Examples';
-import { Hint } from './solver/Hint';
-import { Strategies } from './solver/strategies/Strategies';
-import { type StrategyResult } from "./solver/strategies/StrategyResult";
-import type { StrategyDetails } from './solver/strategies/StrategyDetails';
+import { useAppState } from './useAppState';
 
-type EditMode = 'Filling' | 'Empty';
-
-const AVAILABLE_STRATEGIES: StrategyDetails[] = [
-  Strategies.Intersection.Basic,
-  Strategies.Intersection.Smart,
-  Strategies.Anchor.End,
-  Strategies.Anchor.Start,
-  Strategies.Maximal.Basic,
-  Strategies.AutoFill.CompleteLine,
-  Strategies.Validation.OversizedBlock,
-];
-
-type SolverRunState = 'Idle' | 'Running' | 'Paused' | 'Completed' | 'Stalled' | 'Faulted';
-
-function cloneBoardWithResize(prevBoard: Board, nextSize: number): Board {
-  const safeSize = Math.max(2, Math.min(20, nextSize));
-  const rowsTemplate: number[][] = Array.from({ length: safeSize }, (_, r) => {
-    if (r >= prevBoard.size) return [];
-    return prevBoard.rows[r].hints.map((h) => Math.min(Number(h), safeSize));
-  });
-  const colsTemplate: number[][] = Array.from({ length: safeSize }, (_, c) => {
-    if (c >= prevBoard.size) return [];
-    return prevBoard.cols[c].hints.map((h) => Math.min(Number(h), safeSize));
-  });
-
-  const nextBoard = Board.create({
-    size: safeSize,
-    rows: rowsTemplate,
-    cols: colsTemplate,
-  });
-
-  const copyLimit = Math.min(prevBoard.size, safeSize);
-  for (let r = 0; r < copyLimit; r++) {
-    for (let c = 0; c < copyLimit; c++) {
-      nextBoard.rows[r].cells[c].status = prevBoard.rows[r].cells[c].status;
-    }
-  }
-
-  return nextBoard;
-}
-
-function createEmptyTemplate(size: number): BoardTemplate {
-  return {
-    size,
-    rows: Array.from({ length: size }, () => []),
-    cols: Array.from({ length: size }, () => []),
-  };
-}
-
-function App() {
-  const [board, setBoard] = useState<Board>(() => Board.create(Examples.small));
-  const [editMode, setEditMode] = useState<EditMode>('Filling');
-  const [selectedStrategyIds, setSelectedStrategyIds] = useState<string[]>(() =>
-    AVAILABLE_STRATEGIES.filter((s) => s.tier === 'working').map((s) => s.id),
-  );
-  const [runState, setRunState] = useState<SolverRunState>('Idle');
-  const [stepCount, setStepCount] = useState<number>(0);
-  const [lastResult, setLastResult] = useState<StrategyResult | null>(null);
-  const [stepDelayMs, setStepDelayMs] = useState<number>(120);
-  const [hadFlawedMutations, setHadFlawedMutations] = useState<boolean>(false);
-
-  const workingBoardRef = useRef<Board | null>(null);
-  const flawedMutationsRef = useRef<boolean>(false);
-  const iteratorRef = useRef<Generator<
-    StrategyResult.StepTaken | StrategyResult.CellChanged,
-    StrategyResult,
-    void
-  > | null>(null);
-
-  const resetGeneratorSession = useCallback(() => {
-    iteratorRef.current = null;
-    workingBoardRef.current = null;
-    flawedMutationsRef.current = false;
-    setHadFlawedMutations(false);
-    setRunState('Idle');
-    setStepCount(0);
-    setLastResult(null);
-  }, []);
-
-  const executeSingleStep = useCallback((): boolean => {
-    if (selectedStrategyIds.length === 0) {
-      return false;
-    }
-
-    if (!iteratorRef.current || !workingBoardRef.current) {
-      const working = Board.clone(board);
-      workingBoardRef.current = working;
-      const activeStrategies = AVAILABLE_STRATEGIES.filter((s) => selectedStrategyIds.includes(s.id));
-      iteratorRef.current = Strategies.Orchestrator(working, activeStrategies);
-    }
-
-    const res = iteratorRef.current.next();
-    const updatedSnapshot = Board.clone(workingBoardRef.current);
-    setBoard(updatedSnapshot);
-    setLastResult(res.value);
-
-    if (
-      res.value.strategyName === 'Intersection.Smart' &&
-      (res.value.type === 'CellChanged' || (res.value.type === 'StepTaken' && res.value.changedCells > 0))
-    ) {
-      flawedMutationsRef.current = true;
-      setHadFlawedMutations(true);
-    }
-
-    if (!res.done) {
-      setStepCount((c) => c + 1);
-      return true;
-    }
-
-    // Generator finished
-    iteratorRef.current = null;
-    workingBoardRef.current = null;
-    if (res.value.type === 'Completed') {
-      setRunState('Completed');
-    } else if (res.value.type === 'Faulted') {
-      setRunState('Faulted');
-    } else {
-      setRunState(Board.isCompleted(updatedSnapshot) ? 'Completed' : 'Stalled');
-    }
-    return false;
-  }, [board, selectedStrategyIds]);
-
-  useEffect(() => {
-    if (runState !== 'Running') return;
-
-    const timer = window.setInterval(() => {
-      const hasMore = executeSingleStep();
-      if (!hasMore) {
-        window.clearInterval(timer);
-      }
-    }, stepDelayMs);
-
-    return () => window.clearInterval(timer);
-  }, [executeSingleStep, runState, stepDelayMs]);
-
-  const handleCellClick = (rowIndex: number, colIndex: number) => {
-    resetGeneratorSession();
-    setBoard((prev) => {
-      const next = Board.clone(prev);
-      const cell = next.rows[rowIndex].cells[colIndex];
-      if (editMode === 'Filling') {
-        cell.status =
-          cell.status === CellStatus.Filled ? CellStatus.Unknown : CellStatus.Filled;
-      } else {
-        cell.status =
-          cell.status === CellStatus.Empty ? CellStatus.Unknown : CellStatus.Empty;
-      }
-      return next;
-    });
-  };
-
-  const handleAddHint = (axis: 'row' | 'col', lineIndex: number) => {
-    resetGeneratorSession();
-    setBoard((prev) => {
-      const next = Board.clone(prev);
-      const targetLine = axis === 'row' ? next.rows[lineIndex] : next.cols[lineIndex];
-      if (BoardLine.canAddHint(targetLine.hints, next.size)) {
-        targetLine.hints.push(Hint.of(1));
-      }
-      return next;
-    });
-  };
-
-  const handleRemoveLastHint = (axis: 'row' | 'col', lineIndex: number) => {
-    resetGeneratorSession();
-    setBoard((prev) => {
-      const next = Board.clone(prev);
-      const targetLine = axis === 'row' ? next.rows[lineIndex] : next.cols[lineIndex];
-      if (targetLine.hints.length > 0) {
-        targetLine.hints.pop();
-      }
-      return next;
-    });
-  };
-
-  const handleUpdateHint = (
-    axis: 'row' | 'col',
-    lineIndex: number,
-    hintIndex: number,
-    newValue: number,
-  ) => {
-    resetGeneratorSession();
-    setBoard((prev) => {
-      const next = Board.clone(prev);
-      const targetLine = axis === 'row' ? next.rows[lineIndex] : next.cols[lineIndex];
-      const maxAllowed = BoardLine.getMaxHintValue(targetLine.hints, hintIndex, next.size);
-      const clamped = Math.max(1, Math.min(maxAllowed, Math.floor(newValue)));
-      targetLine.hints[hintIndex] = Hint.of(clamped);
-      return next;
-    });
-  };
-
-  const handleSizeChange = (newSize: number) => {
-    resetGeneratorSession();
-    setBoard((prev) => cloneBoardWithResize(prev, newSize));
-  };
-
-  const handleLoadPreset = (template: BoardTemplate) => {
-    resetGeneratorSession();
-    setBoard(Board.create(template));
-  };
-
-  const handleResetCells = () => {
-    resetGeneratorSession();
-    setBoard((prev) =>
-      Board.create({
-        size: prev.size,
-        rows: prev.rows.map((r) => r.hints.map(Number)),
-        cols: prev.cols.map((c) => c.hints.map(Number)),
-      }),
-    );
-  };
-
-  const toggleStrategySelection = (id: string) => {
-    resetGeneratorSession();
-    setSelectedStrategyIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
-  };
-
-  const handleApplyPreset = (preset: 'sound' | 'all' | 'validation') => {
-    resetGeneratorSession();
-    if (preset === 'sound') {
-      setSelectedStrategyIds(
-        AVAILABLE_STRATEGIES.filter((s) => s.tier === 'working').map((s) => s.id),
-      );
-    } else if (preset === 'all') {
-      setSelectedStrategyIds(AVAILABLE_STRATEGIES.map((s) => s.id));
-    } else if (preset === 'validation') {
-      setSelectedStrategyIds((prev) => {
-        const valIds = AVAILABLE_STRATEGIES.filter((s) => s.tier === 'validation').map((s) => s.id);
-        const hasAllVal = valIds.every((id) => prev.includes(id));
-        if (hasAllVal) {
-          return prev.filter((id) => !valIds.includes(id));
-        } else {
-          return Array.from(new Set([...prev, ...valIds]));
-        }
-      });
-    }
-  };
-
-  const handleStepClick = () => {
-    if (runState === 'Running') {
-      setRunState('Paused');
-      return;
-    }
-    setRunState('Paused');
-    executeSingleStep();
-  };
-
-  const handleRunPauseToggle = () => {
-    if (runState === 'Running') {
-      setRunState('Paused');
-    } else {
-      setRunState('Running');
-    }
-  };
-
-  const isSolved = Board.isCompleted(board);
+function App()
+{
+  const {
+    board,
+    editMode,
+    selectedStrategyIds,
+    lastResult,
+    stepCount,
+    isSolved,
+    hadFlawedMutations,
+    runState,
+    stepDelayMs,
+    setStepDelayMs,
+    setEditMode,
+    toggleStrategySelection,
+    handleRunPauseToggle,
+    handleStepClick,
+    handleAddHint,
+    handleApplyPreset,
+    handleCellClick,
+    handleLoadPreset,
+    handleRemoveLastHint,
+    handleResetCells,
+    handleSizeChange,
+    handleUpdateHint,
+  } = useAppState();
 
   return (
     <main className="app-shell">
@@ -298,9 +60,11 @@ function App() {
                 min={2}
                 max={20}
                 value={board.size}
-                onChange={(e) => {
+                onChange={(e) =>
+                {
                   const val = Number.parseInt(e.target.value, 10);
-                  if (!Number.isNaN(val)) {
+                  if (!Number.isNaN(val))
+                  {
                     handleSizeChange(val);
                   }
                 }}
@@ -337,7 +101,7 @@ function App() {
               <button
                 type="button"
                 className="btn"
-                onClick={() => handleLoadPreset(createEmptyTemplate(board.size))}
+                onClick={() => handleLoadPreset(BoardTemplate.createEmpty(board.size))}
               >
                 Blank ({board.size}×{board.size})
               </button>
@@ -366,9 +130,8 @@ function App() {
                 type="button"
                 role="radio"
                 aria-checked={editMode === 'Filling'}
-                className={`mode-switch__option ${
-                  editMode === 'Filling' ? 'mode-switch__option--active' : ''
-                }`}
+                className={`mode-switch__option ${editMode === 'Filling' ? 'mode-switch__option--active' : ''
+                  }`}
                 onClick={() => setEditMode('Filling')}
               >
                 <span className="mode-preview mode-preview--filled" aria-hidden="true" />
@@ -378,9 +141,8 @@ function App() {
                 type="button"
                 role="radio"
                 aria-checked={editMode === 'Empty'}
-                className={`mode-switch__option ${
-                  editMode === 'Empty' ? 'mode-switch__option--active' : ''
-                }`}
+                className={`mode-switch__option ${editMode === 'Empty' ? 'mode-switch__option--active' : ''
+                  }`}
                 onClick={() => setEditMode('Empty')}
               >
                 <span className="mode-preview mode-preview--empty" aria-hidden="true">
@@ -406,15 +168,14 @@ function App() {
               </div>
               <p className="status-detail">
                 {lastResult
-                  ? `${lastResult.strategyName} — ${
-                      lastResult.type === 'CellChanged'
-                        ? 'Updated cell state'
-                        : lastResult.type === 'StepTaken'
-                          ? lastResult.description
-                          : lastResult.type === 'Faulted'
-                            ? lastResult.reason
-                            : lastResult.message
-                    }`
+                  ? `${lastResult.strategyName} — ${lastResult.type === 'CellChanged'
+                    ? 'Updated cell state'
+                    : lastResult.type === 'StepTaken'
+                      ? lastResult.description
+                      : lastResult.type === 'Faulted'
+                        ? lastResult.reason
+                        : lastResult.message
+                  }`
                   : 'Click a cell or hint to edit, or step through active strategies.'}
               </p>
               {(runState === 'Stalled' || runState === 'Faulted') && hadFlawedMutations && (
@@ -497,16 +258,16 @@ function App() {
               <code>Strategies.Orchestrator</code>.
             </p>
             <div className="strategy-list">
-              {AVAILABLE_STRATEGIES.map((item) => {
+              {AvailableStrategies.map((item) =>
+              {
                 const checked = selectedStrategyIds.includes(item.id);
                 const isFlawed = item.tier === 'flawed';
                 const isValidation = item.tier === 'validation';
                 return (
                   <label
                     key={item.id}
-                    className={`strategy-item ${checked ? 'strategy-item--active' : ''} ${
-                      isFlawed ? 'strategy-item--flawed' : ''
-                    } ${isValidation ? 'strategy-item--validation' : ''}`}
+                    className={`strategy-item ${checked ? 'strategy-item--active' : ''} ${isFlawed ? 'strategy-item--flawed' : ''
+                      } ${isValidation ? 'strategy-item--validation' : ''}`}
                   >
                     <input
                       type="checkbox"

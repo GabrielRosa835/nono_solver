@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { type Board } from '../solver/Board';
-import { BoardLine } from '../solver/BoardLine';
-import { CellStatus } from '../solver/CellStatus';
-import { HintInput } from './HintInput';
+import React from 'react';
+import { type Board } from '../../solver/Board';
+import { BoardLine } from '../../solver/BoardLine';
+import { CellStatus } from '../../solver/CellStatus';
+import { HintInput } from '../HintInput/HintInput';
+import { useNonogramBoardState } from './useNonogramBoardState';
 
 export type NonogramBoardProps = {
   board: Board;
@@ -12,47 +13,17 @@ export type NonogramBoardProps = {
   onUpdateHint: (axis: 'row' | 'col', lineIndex: number, hintIndex: number, newValue: number) => void;
 };
 
-export function NonogramBoard({
-  board,
-  onCellClick,
-  onAddHint,
-  onRemoveLastHint,
-  onUpdateHint,
-}: NonogramBoardProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const maxRowHints = Math.max(1, ...board.rows.map((r) => r.hints.length));
-  const estimatedRowHeaderWidth = Math.max(88, maxRowHints * 26 + 36);
-
-  const availableForCells =
-    containerWidth > 0 ? containerWidth - estimatedRowHeaderWidth - 16 : 640;
-  const computedCellSize = Math.floor(availableForCells / board.size);
-  const cellSize = Math.max(18, Math.min(36, computedCellSize));
-
+export function NonogramBoard(props: NonogramBoardProps) {
+  const state = useNonogramBoardState(props);
   return (
-    <div ref={containerRef} className="board-viewport">
+    <div ref={state.containerRef} className="board-viewport">
       <div
         className="nonogram-board"
         style={
           {
-            '--cell-size': `${cellSize}px`,
-            gridTemplateColumns: `auto repeat(${board.size}, var(--cell-size))`,
-            gridTemplateRows: `auto repeat(${board.size}, var(--cell-size))`,
+            '--cell-size': `${state.cellSize}px`,
+            gridTemplateColumns: `auto repeat(${props.board.size}, var(--cell-size))`,
+            gridTemplateRows: `auto repeat(${props.board.size}, var(--cell-size))`,
           } as React.CSSProperties
         }
       >
@@ -60,10 +31,10 @@ export function NonogramBoard({
         <div className="board-corner" aria-hidden="true" />
 
         {/* Column headers */}
-        {board.cols.map((col, colIndex) => {
+        {props.board.cols.map((col, colIndex) => {
           const isColDone = col.hints.length > 0 && BoardLine.isCompleted(col);
-          const isMajorRight = (colIndex + 1) % 5 === 0 && colIndex !== board.size - 1;
-          const canAddColHint = BoardLine.canAddHint(col.hints, board.size);
+          const isMajorRight = (colIndex + 1) % 5 === 0 && colIndex !== props.board.size - 1;
+          const canAddColHint = BoardLine.canAddHint(col.hints, props.board.size);
 
           return (
             <div
@@ -79,7 +50,7 @@ export function NonogramBoard({
                   title={`Remove last hint from column ${colIndex + 1}`}
                   aria-label={`Remove last hint from column ${colIndex + 1}`}
                   disabled={col.hints.length === 0}
-                  onClick={() => onRemoveLastHint('col', colIndex)}
+                  onClick={() => props.onRemoveLastHint('col', colIndex)}
                 >
                   −
                 </button>
@@ -89,7 +60,7 @@ export function NonogramBoard({
                   title={`Add hint to column ${colIndex + 1}`}
                   aria-label={`Add hint to column ${colIndex + 1}`}
                   disabled={!canAddColHint}
-                  onClick={() => onAddHint('col', colIndex)}
+                  onClick={() => props.onAddHint('col', colIndex)}
                 >
                   +
                 </button>
@@ -97,14 +68,14 @@ export function NonogramBoard({
 
               <div className="hint-list hint-list--col">
                 {col.hints.map((hint, hintIndex) => {
-                  const maxAllowed = BoardLine.getMaxHintValue(col.hints, hintIndex, board.size);
+                  const maxAllowed = BoardLine.getMaxHintValue(col.hints, hintIndex, props.board.size);
                   return (
                     <HintInput
                       key={`col-${colIndex}-hint-${hintIndex}`}
                       value={hint}
                       max={maxAllowed}
                       ariaLabel={`Column ${colIndex + 1} hint ${hintIndex + 1}`}
-                      onChange={(newVal) => onUpdateHint('col', colIndex, hintIndex, newVal)}
+                      onChange={(newVal) => props.onUpdateHint('col', colIndex, hintIndex, newVal)}
                     />
                   );
                 })}
@@ -114,10 +85,10 @@ export function NonogramBoard({
         })}
 
         {/* Rows (each row has a row header followed by N cells) */}
-        {board.rows.map((row, rowIndex) => {
+        {props.board.rows.map((row, rowIndex) => {
           const isRowDone = row.hints.length > 0 && BoardLine.isCompleted(row);
-          const isMajorBottom = (rowIndex + 1) % 5 === 0 && rowIndex !== board.size - 1;
-          const canAddRowHint = BoardLine.canAddHint(row.hints, board.size);
+          const isMajorBottom = (rowIndex + 1) % 5 === 0 && rowIndex !== props.board.size - 1;
+          const canAddRowHint = BoardLine.canAddHint(row.hints, props.board.size);
 
           return (
             <div key={`row-group-${rowIndex}`} className="board-row-contents">
@@ -133,7 +104,7 @@ export function NonogramBoard({
                     title={`Add hint to row ${rowIndex + 1}`}
                     aria-label={`Add hint to row ${rowIndex + 1}`}
                     disabled={!canAddRowHint}
-                    onClick={() => onAddHint('row', rowIndex)}
+                    onClick={() => props.onAddHint('row', rowIndex)}
                   >
                     +
                   </button>
@@ -143,7 +114,7 @@ export function NonogramBoard({
                     title={`Remove last hint from row ${rowIndex + 1}`}
                     aria-label={`Remove last hint from row ${rowIndex + 1}`}
                     disabled={row.hints.length === 0}
-                    onClick={() => onRemoveLastHint('row', rowIndex)}
+                    onClick={() => props.onRemoveLastHint('row', rowIndex)}
                   >
                     −
                   </button>
@@ -151,14 +122,14 @@ export function NonogramBoard({
 
                 <div className="hint-list hint-list--row">
                   {row.hints.map((hint, hintIndex) => {
-                    const maxAllowed = BoardLine.getMaxHintValue(row.hints, hintIndex, board.size);
+                    const maxAllowed = BoardLine.getMaxHintValue(row.hints, hintIndex, props.board.size);
                     return (
                       <HintInput
                         key={`row-${rowIndex}-hint-${hintIndex}`}
                         value={hint}
                         max={maxAllowed}
                         ariaLabel={`Row ${rowIndex + 1} hint ${hintIndex + 1}`}
-                        onChange={(newVal) => onUpdateHint('row', rowIndex, hintIndex, newVal)}
+                        onChange={(newVal) => props.onUpdateHint('row', rowIndex, hintIndex, newVal)}
                       />
                     );
                   })}
@@ -166,7 +137,7 @@ export function NonogramBoard({
               </div>
 
               {row.cells.map((cell, colIndex) => {
-                const isMajorRight = (colIndex + 1) % 5 === 0 && colIndex !== board.size - 1;
+                const isMajorRight = (colIndex + 1) % 5 === 0 && colIndex !== props.board.size - 1;
                 const statusName = CellStatus.detail(cell.status);
 
                 return (
@@ -177,7 +148,7 @@ export function NonogramBoard({
                       isMajorRight ? 'grid-major-right' : ''
                     } ${isMajorBottom ? 'grid-major-bottom' : ''}`}
                     aria-label={`Row ${rowIndex + 1}, Column ${colIndex + 1}: ${statusName}`}
-                    onClick={() => onCellClick(rowIndex, colIndex)}
+                    onClick={() => props.onCellClick(rowIndex, colIndex)}
                   >
                     {cell.status === CellStatus.Empty && (
                       <span className="cell-cross" aria-hidden="true">
