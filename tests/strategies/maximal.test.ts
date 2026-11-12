@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Board } from '../../src/solver/Board';
 import { CellStatus } from '../../src/solver/CellStatus';
-import { Maximal } from '../../src/solver/strategies/maximal/Maximal.Basic';
+import { Maximal } from '../../src/solver/strategies/maximal';
+import { Strategy } from '../../src/solver/strategies';
 
 describe('Maximal solving strategies', () => {
   describe('Maximal.Basic', () => {
@@ -15,7 +16,7 @@ describe('Maximal solving strategies', () => {
       board.rows[0].cells[1].status = CellStatus.Filled;
       board.rows[0].cells[2].status = CellStatus.Filled;
 
-      const gen = Maximal.Basic(board);
+      const gen = Strategy.create(Maximal.Basic, board);
       let res = gen.next();
       while (!res.done) {
         expect(res.value.type).toBe('CellChanged');
@@ -40,7 +41,7 @@ describe('Maximal solving strategies', () => {
       board.rows[0].cells[0].status = CellStatus.Filled;
       board.rows[0].cells[1].status = CellStatus.Filled;
 
-      const gen = Maximal.Basic(board);
+      const gen = Strategy.create(Maximal.Basic, board);
       let res = gen.next();
       while (!res.done) {
         res = gen.next();
@@ -60,7 +61,7 @@ describe('Maximal solving strategies', () => {
       board.rows[0].cells[1].status = CellStatus.Filled;
       board.rows[0].cells[2].status = CellStatus.Filled;
 
-      const gen = Maximal.Basic(board);
+      const gen = Strategy.create(Maximal.Basic, board);
       let res = gen.next();
       while (!res.done) {
         res = gen.next();

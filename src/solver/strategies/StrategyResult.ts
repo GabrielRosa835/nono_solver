@@ -1,3 +1,5 @@
+import type { StrategyDetails } from "./StrategyDetails";
+
 export type StrategyResult =
     | StrategyResult.Completed
     | StrategyResult.Faulted
@@ -59,11 +61,19 @@ export namespace StrategyResult
         strategyName,
     });
 
-    export const withName = (strategyName: string) => ({
-        Completed: (message: string): Completed => Completed(strategyName, message),
-        Faulted: (reason: string): Faulted => Faulted(strategyName, reason),
-        Stalled: (message: string): Stalled => Stalled(strategyName, message),
-        StepTaken: (description: string, changedCells: number): StepTaken => StepTaken(strategyName, description, changedCells),
-        CellChanged: (): CellChanged => CellChanged(strategyName),
+    export type Factory = {
+        completed: (message: string) => Completed,
+        faulted: (reason: string) => Faulted,
+        stalled: (message: string) => Stalled,
+        stepTaken: (description: string, changedCells: number) => StepTaken,
+        cellChanged: () => CellChanged,
+    }
+
+    export const forStrategy = (details: StrategyDetails): Factory => ({
+        completed: (message: string): Completed => Completed(details.label, message),
+        faulted: (reason: string): Faulted => Faulted(details.label, reason),
+        stalled: (message: string): Stalled => Stalled(details.label, message),
+        stepTaken: (description: string, changedCells: number): StepTaken => StepTaken(details.label, description, changedCells),
+        cellChanged: (): CellChanged => CellChanged(details.label),
     });
 }

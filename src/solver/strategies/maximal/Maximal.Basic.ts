@@ -1,6 +1,6 @@
-import { Board } from "../../Board";
 import { BoardLine } from "../../BoardLine";
 import { CellStatus } from "../../CellStatus";
+import type { StrategyContext } from "../StrategyContext";
 import type { StrategyDetails } from "../StrategyDetails";
 import { StrategyResult } from "../StrategyResult";
 
@@ -12,7 +12,7 @@ export const Details: StrategyDetails = {
     strategy: strategy,
 };
 
-function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
+function* strategy(ctx: StrategyContext): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
 {
     let changed = false;
 
@@ -35,7 +35,7 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
                 {
                     line.cells[beforeIndex].status = CellStatus.Empty;
                     lineChanged = true;
-                    yield StrategyResult.CellChanged("Maximal.Basic");
+                    yield ctx.results.cellChanged();
                 }
 
                 const afterIndex = block.endIndex + 1;
@@ -43,7 +43,7 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
                 {
                     line.cells[afterIndex].status = CellStatus.Empty;
                     lineChanged = true;
-                    yield StrategyResult.CellChanged("Maximal.Basic");
+                    yield ctx.results.cellChanged();
                 }
             }
         }
@@ -51,10 +51,10 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
         return lineChanged;
     };
 
-    for (let i = 0; i < board.size; i++)
+    for (let i = 0; i < ctx.board.size; i++)
     {
-        const rowChanged = yield* processLine(board.rows[i]);
-        const colChanged = yield* processLine(board.cols[i]);
+        const rowChanged = yield* processLine(ctx.board.rows[i]);
+        const colChanged = yield* processLine(ctx.board.cols[i]);
         if (rowChanged || colChanged)
         {
             changed = true;
@@ -63,9 +63,9 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
 
     if (changed)
     {
-        return StrategyResult.Stalled("Maximal.Basic", "Maximal.Basic passed but board may have further changes.");
+        return ctx.results.stalled("Maximal.Basic passed but board may have further changes.");
     } else
     {
-        return StrategyResult.Stalled("Maximal.Basic", "Maximal.Basic stalled: no maximal blocks were bounded.");
+        return ctx.results.stalled("Maximal.Basic stalled: no maximal blocks were bounded.");
     }
 }

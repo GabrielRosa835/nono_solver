@@ -1,6 +1,6 @@
-import { Board } from "../../Board";
 import { BoardLine } from "../../BoardLine";
 import { CellStatus } from "../../CellStatus";
+import type { StrategyContext } from "../StrategyContext";
 import type { StrategyDetails } from "../StrategyDetails";
 import { StrategyResult } from "../StrategyResult";
 
@@ -12,11 +12,11 @@ export const Details: StrategyDetails = {
     strategy: strategy,
 };
 
-function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
+function* strategy(ctx: StrategyContext): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
 {
-    for (let r = 0; r < board.rows.length; r++)
+    for (let r = 0; r < ctx.board.rows.length; r++)
     {
-        const row = board.rows[r];
+        const row = ctx.board.rows[r];
         const maxHint = row.hints.length === 0 ? 0 : Math.max(...row.hints.map(Number));
         const blocks = BoardLine.getContiguousBlocks(row, CellStatus.Filled);
 
@@ -24,17 +24,14 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
         {
             if (block.size > maxHint)
             {
-                return StrategyResult.Faulted(
-                    "Validation.OversizedBlock",
-                    `Contiguous filled block of length ${block.size} exceeds maximum hint ${maxHint} on row ${r + 1}.`
-                );
+                return ctx.results.faulted(`Contiguous filled block of length ${block.size} exceeds maximum hint ${maxHint} on row ${r + 1}.`);
             }
         }
     }
 
-    for (let c = 0; c < board.cols.length; c++)
+    for (let c = 0; c < ctx.board.cols.length; c++)
     {
-        const col = board.cols[c];
+        const col = ctx.board.cols[c];
         const maxHint = col.hints.length === 0 ? 0 : Math.max(...col.hints.map(Number));
         const blocks = BoardLine.getContiguousBlocks(col, CellStatus.Filled);
 
@@ -42,13 +39,10 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
         {
             if (block.size > maxHint)
             {
-                return StrategyResult.Faulted(
-                    "Validation.OversizedBlock",
-                    `Contiguous filled block of length ${block.size} exceeds maximum hint ${maxHint} on column ${c + 1}.`
-                );
+                return ctx.results.faulted(`Contiguous filled block of length ${block.size} exceeds maximum hint ${maxHint} on column ${c + 1}.`);
             }
         }
     }
 
-    return StrategyResult.Completed("Validation.OversizedBlock", "All filled blocks are within maximum hint constraints.");
+    return ctx.results.completed("All filled blocks are within maximum hint constraints.");
 }

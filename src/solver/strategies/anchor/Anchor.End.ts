@@ -1,6 +1,6 @@
-import type { Board } from "../../Board";
 import { BoardLine } from "../../BoardLine";
 import { CellStatus } from "../../CellStatus";
+import type { StrategyContext } from "../StrategyContext";
 import type { StrategyDetails } from "../StrategyDetails";
 import { StrategyResult } from "../StrategyResult";
 
@@ -13,7 +13,7 @@ export const Details: StrategyDetails =
     strategy: stragegy,
 };
 
-function* stragegy(board: Board): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
+function* stragegy(ctx: StrategyContext): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
 {
     let changed = false;
 
@@ -46,7 +46,7 @@ function* stragegy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
                 {
                     line.cells[k].status = CellStatus.Filled;
                     lineChanged = true;
-                    yield StrategyResult.CellChanged("Anchor.End");
+                    yield ctx.results.cellChanged();
                 }
             }
         }
@@ -58,16 +58,16 @@ function* stragegy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
         {
             line.cells[separatorIndex].status = CellStatus.Empty;
             lineChanged = true;
-            yield StrategyResult.CellChanged("Anchor.End");
+            yield ctx.results.cellChanged();
         }
 
         return lineChanged;
     };
 
-    for (let i = 0; i < board.size; i++)
+    for (let i = 0; i < ctx.board.size; i++)
     {
-        const rowChanged = yield* processLine(board.rows[i]);
-        const colChanged = yield* processLine(board.cols[i]);
+        const rowChanged = yield* processLine(ctx.board.rows[i]);
+        const colChanged = yield* processLine(ctx.board.cols[i]);
         if (rowChanged || colChanged)
         {
             changed = true;
@@ -76,10 +76,10 @@ function* stragegy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
 
     if (changed)
     {
-        return StrategyResult.Stalled("Anchor.End", "Anchor.End passed but board may have further changes.");
+        return ctx.results.stalled("Anchor.End passed but board may have further changes.");
     }
     else
     {
-        return StrategyResult.Stalled("Anchor.End", "Anchor.End stalled: no end anchors were updated.");
+        return ctx.results.stalled("Anchor.End stalled: no end anchors were updated.");
     }
 }

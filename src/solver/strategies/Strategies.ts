@@ -1,5 +1,6 @@
 import { Board } from "../Board";
-import { type Strategy } from "./Strategy";
+import { StrategyContext } from "./StrategyContext";
+import type { StrategyDetails } from "./StrategyDetails";
 import { StrategyResult } from "./StrategyResult";
 
 import { Anchor as _Anchor } from "./anchor";
@@ -16,16 +17,10 @@ export namespace Strategies
     export const Maximal = _Maximal;
     export const Validation = _Validation;
 
-    export function* NoOpGenerator(): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
-    {
-        yield StrategyResult.StepTaken("NoOp", "Doing nothing", 0);
-        return StrategyResult.Stalled("NoOp", "NoOp strategy always stalls.");
-    }
-
     /**
      * Orchestrator that runs multiple strategies continuously until the board is completed or stalled.
      */
-    export function* Orchestrator(board: Board, strategies: Strategy[]): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
+    export function* Orchestrator(board: Board, strategies: StrategyDetails[]): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
     {
         const validation = Board.validateHints(board);
         if (!validation.valid)
@@ -37,9 +32,9 @@ export namespace Strategies
         {
             let changedInIteration = false;
 
-            for (const strategy of strategies)
+            for (const detail of strategies)
             {
-                const strategyIterator = strategy(board);
+                const strategyIterator = detail.strategy(StrategyContext.create(board, detail));
                 let result = strategyIterator.next();
 
                 while (!result.done)
@@ -69,6 +64,4 @@ export namespace Strategies
 
         return StrategyResult.Completed("Orchestrator", "Board is completely solved!");
     }
-
-
 }

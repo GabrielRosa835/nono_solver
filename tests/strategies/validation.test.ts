@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Board } from '../../src/solver/Board';
 import { CellStatus } from '../../src/solver/CellStatus';
-import { Validation } from '../../src/solver/strategies/validation/Validation.OversizedBlock';
+import { Validation } from '../../src/solver/strategies/validation';
+import { Strategy } from '../../src/solver/strategies';
 
 describe('Validation strategies', () => {
   describe('Validation.OversizedBlock', () => {
@@ -16,7 +17,7 @@ describe('Validation strategies', () => {
       board.rows[0].cells[1].status = CellStatus.Filled;
       board.rows[0].cells[2].status = CellStatus.Filled;
 
-      const gen = Validation.OversizedBlock(board);
+      const gen = Strategy.create(Validation.OversizedBlock, board);
       const res = gen.next();
 
       expect(res.done).toBe(true);
@@ -38,7 +39,7 @@ describe('Validation strategies', () => {
       board.rows[0].cells[1].status = CellStatus.Filled;
       board.rows[0].cells[2].status = CellStatus.Filled;
 
-      const gen = Validation.OversizedBlock(board);
+      const gen = Strategy.create(Validation.OversizedBlock, board);
       const res = gen.next();
 
       expect(res.done).toBe(true);
@@ -59,7 +60,7 @@ describe('Validation strategies', () => {
       board.rows[0].cells[1].status = CellStatus.Filled;
       board.rows[1].cells[1].status = CellStatus.Filled;
 
-      const gen = Validation.OversizedBlock(board);
+      const gen = Strategy.create(Validation.OversizedBlock, board);
       const res = gen.next();
 
       expect(res.done).toBe(true);
@@ -78,7 +79,7 @@ describe('Validation strategies', () => {
       });
       board.rows[0].cells[0].status = CellStatus.Filled;
 
-      const gen = Validation.OversizedBlock(board);
+      const gen = Strategy.create(Validation.OversizedBlock, board);
       const res = gen.next();
 
       expect(res.done).toBe(true);

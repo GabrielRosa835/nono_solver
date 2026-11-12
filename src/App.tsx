@@ -97,10 +97,7 @@ function App() {
     if (!iteratorRef.current || !workingBoardRef.current) {
       const working = Board.clone(board);
       workingBoardRef.current = working;
-      const activeStrategies = AVAILABLE_STRATEGIES.filter((s) =>
-        selectedStrategyIds.includes(s.id),
-      ).map((s) => s.strategy);
-
+      const activeStrategies = AVAILABLE_STRATEGIES.filter((s) => selectedStrategyIds.includes(s.id));
       iteratorRef.current = Strategies.Orchestrator(working, activeStrategies);
     }
 

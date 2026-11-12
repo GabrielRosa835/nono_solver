@@ -1,6 +1,6 @@
-import { Board } from "../../Board";
 import { BoardLine } from "../../BoardLine";
 import { CellStatus } from "../../CellStatus";
+import type { StrategyContext } from "../StrategyContext";
 import type { StrategyDetails } from "../StrategyDetails";
 import { StrategyResult } from "../StrategyResult";
 
@@ -12,14 +12,14 @@ export const Details: StrategyDetails = {
     strategy: strategy,
 };
 
-export function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
+function* strategy(ctx: StrategyContext): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
 {
     let changed = false;
 
-    for (let i = 0; i < board.size; i++)
+    for (let i = 0; i < ctx.board.size; i++)
     {
-        const row = board.rows[i];
-        const col = board.cols[i];
+        const row = ctx.board.rows[i];
+        const col = ctx.board.cols[i];
 
         if (BoardLine.isCompleted(row))
         {
@@ -30,7 +30,7 @@ export function* strategy(board: Board): Generator<StrategyResult.StepTaken | St
                 {
                     cell.status = CellStatus.Empty;
                     changedCells++;
-                    yield StrategyResult.CellChanged("AutoFill.CompleteLine");
+                    yield ctx.results.cellChanged();
                 }
             }
             if (changedCells > 0)
@@ -48,7 +48,7 @@ export function* strategy(board: Board): Generator<StrategyResult.StepTaken | St
                 {
                     cell.status = CellStatus.Empty;
                     changedCells++;
-                    yield StrategyResult.CellChanged("AutoFill.CompleteLine");
+                    yield ctx.results.cellChanged();
                 }
             }
             if (changedCells > 0)
@@ -60,10 +60,10 @@ export function* strategy(board: Board): Generator<StrategyResult.StepTaken | St
 
     if (changed)
     {
-        return StrategyResult.Stalled("AutoFill.CompleteLine", "AutoFill.CompleteLine passed but board may have further changes.");
+        return ctx.results.stalled("AutoFill.CompleteLine passed but board may have further changes.");
     }
     else
     {
-        return StrategyResult.Stalled("AutoFill.CompleteLine", "AutoFill.CompleteLine stalled: no lines were completed or changed.");
+        return ctx.results.stalled("AutoFill.CompleteLine stalled: no lines were completed or changed.");
     }
 }

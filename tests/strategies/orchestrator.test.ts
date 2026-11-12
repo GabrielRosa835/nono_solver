@@ -55,7 +55,7 @@ describe('Strategies.Orchestrator integration', () => {
       Strategies.Anchor.Start,
       Strategies.Anchor.End,
       Strategies.Maximal.Basic,
-      Strategies.AutoFill.strategy,
+      Strategies.AutoFill.CompleteLine,
     ];
 
     const gen = Strategies.Orchestrator(board, activeStrategies);

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Board } from '../../src/solver/Board';
 import { CellStatus } from '../../src/solver/CellStatus';
-import { Anchor } from "../../src/solver/strategies/anchor/Anchor.End";
+import { Anchor } from "../../src/solver/strategies/anchor";
+import { Strategy } from '../../src/solver/strategies';
 
 describe('Anchor solving strategies', () => {
   describe('Anchor.Start', () => {
@@ -13,7 +14,7 @@ describe('Anchor solving strategies', () => {
       });
       board.rows[0].cells[0].status = CellStatus.Filled;
 
-      const gen = Anchor.Start(board);
+      const gen = Strategy.create(Anchor.Start, board);
       let res = gen.next();
       while (!res.done) {
         expect(res.value.type).toBe('CellChanged');
@@ -38,7 +39,7 @@ describe('Anchor solving strategies', () => {
       board.rows[0].cells[0].status = CellStatus.Filled;
       board.rows[0].cells[1].status = CellStatus.Filled;
 
-      const gen = Anchor.Start(board);
+      const gen = Strategy.create(Anchor.Start, board);
       let res = gen.next();
       while (!res.done) {
         res = gen.next();
@@ -56,7 +57,7 @@ describe('Anchor solving strategies', () => {
       board.rows[0].cells[0].status = CellStatus.Empty;
       board.rows[0].cells[1].status = CellStatus.Filled;
 
-      const gen = Anchor.Start(board);
+      const gen = Strategy.create(Anchor.Start, board);
       let res = gen.next();
       while (!res.done) {
         res = gen.next();
@@ -77,7 +78,7 @@ describe('Anchor solving strategies', () => {
       // cell 0 is Unknown, cell 1 is Filled
       board.rows[0].cells[1].status = CellStatus.Filled;
 
-      const gen = Anchor.Start(board);
+      const gen = Strategy.create(Anchor.Start, board);
       let res = gen.next();
       while (!res.done) {
         res = gen.next();
@@ -98,7 +99,7 @@ describe('Anchor solving strategies', () => {
       });
       board.rows[0].cells[4].status = CellStatus.Filled;
 
-      const gen = Anchor.End(board);
+      const gen = Strategy.create(Anchor.End, board);
       let res = gen.next();
       while (!res.done) {
         res = gen.next();
@@ -121,7 +122,7 @@ describe('Anchor solving strategies', () => {
       board.rows[0].cells[4].status = CellStatus.Empty;
       board.rows[0].cells[3].status = CellStatus.Filled;
 
-      const gen = Anchor.End(board);
+      const gen = Strategy.create(Anchor.End, board);
       let res = gen.next();
       while (!res.done) {
         res = gen.next();

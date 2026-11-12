@@ -1,6 +1,6 @@
-import type { Board } from "../../Board";
 import { BoardLine } from "../../BoardLine";
 import { CellStatus } from "../../CellStatus";
+import type { StrategyContext } from "../StrategyContext";
 import type { StrategyDetails } from "../StrategyDetails";
 import { StrategyResult } from "../StrategyResult";
 
@@ -13,7 +13,7 @@ export const Details: StrategyDetails = {
     strategy: strategy,
 };
 
-function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
+function* strategy(ctx: StrategyContext): Generator<StrategyResult.StepTaken | StrategyResult.CellChanged, StrategyResult, void>
 {
     let changed = false;
 
@@ -62,7 +62,7 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
                     {
                         line.cells[k].status = CellStatus.Filled;
                         lineChanged = true;
-                        yield StrategyResult.CellChanged("Intersection.Smart");
+                        yield ctx.results.cellChanged();
                     }
                 }
             }
@@ -71,10 +71,10 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
         return lineChanged;
     };
 
-    for (let i = 0; i < board.size; i++)
+    for (let i = 0; i < ctx.board.size; i++)
     {
-        const rowChanged = yield* processLine(board.rows[i]);
-        const colChanged = yield* processLine(board.cols[i]);
+        const rowChanged = yield* processLine(ctx.board.rows[i]);
+        const colChanged = yield* processLine(ctx.board.cols[i]);
         if (rowChanged || colChanged)
         {
             changed = true;
@@ -83,9 +83,10 @@ function* strategy(board: Board): Generator<StrategyResult.StepTaken | StrategyR
 
     if (changed)
     {
-        return StrategyResult.Stalled("Intersection.Smart", "Intersection.Smart passed but board may have further changes.");
-    } else
+        return ctx.results.stalled("Intersection.Smart passed but board may have further changes.");
+    }
+    else
     {
-        return StrategyResult.Stalled("Intersection.Smart", "Intersection.Smart stalled: no new overlaps found.");
+        return ctx.results.stalled("Intersection.Smart stalled: no new overlaps found.");
     }
 }
