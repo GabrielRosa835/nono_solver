@@ -160,6 +160,28 @@ export namespace BoardLine {
         return Math.max(1, lineLength - otherHintsSum - separators);
     }
 
+    export function getContiguousBlocks(line: BoardLine, status: CellStatus): CellSection[] {
+        return BoardLine.split(line).filter(s => s.status === status);
+    }
+
+    export function getFirstPlayableBoundary(line: BoardLine): number {
+        for (let i = 0; i < line.cells.length; i++) {
+            if (line.cells[i].status !== CellStatus.Empty) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    export function getLastPlayableBoundary(line: BoardLine): number {
+        for (let i = line.cells.length - 1; i >= 0; i--) {
+            if (line.cells[i].status !== CellStatus.Empty) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     export function print(line: BoardLine, hintPadding?: number) {
         let hints = line.hints.join(", ");
         if (hintPadding !== undefined && hintPadding > 1) {

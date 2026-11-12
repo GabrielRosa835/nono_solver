@@ -7,36 +7,19 @@ import { CellStatus } from './solver/CellStatus';
 import { Examples } from './solver/Examples';
 import { Hint } from './solver/Hint';
 import { Strategies } from './solver/strategies/Strategies';
-import { type Strategy, type StrategyResult } from './solver/strategies/Strategy';
+import { type StrategyResult } from "./solver/strategies/StrategyResult";
+import type { StrategyDetails } from './solver/strategies/StrategyDetails';
 
 type EditMode = 'Filling' | 'Empty';
 
-type StrategyOption = {
-  id: string;
-  label: string;
-  description: string;
-  strategy: Strategy;
-};
-
-const AVAILABLE_STRATEGIES: StrategyOption[] = [
-  {
-    id: 'Intersection.Basic',
-    label: 'Intersection.Basic',
-    description: 'Fills guaranteed overlaps across full lines without splitting on Empty cells.',
-    strategy: Strategies.Intersection.Basic,
-  },
-  {
-    id: 'Intersection.Smart',
-    label: 'Intersection.Smart',
-    description: 'Splits lines by Empty cells and greedily packs hints into sections.',
-    strategy: Strategies.Intersection.Smart,
-  },
-  {
-    id: 'AutoFill.CompleteLine',
-    label: 'AutoFill.CompleteLine',
-    description: 'Marks remaining Unknown cells as Empty when a line matches all its hints.',
-    strategy: Strategies.AutoFill.CompleteLine,
-  },
+const AVAILABLE_STRATEGIES: StrategyDetails[] = [
+  Strategies.Intersection.Basic,
+  Strategies.Intersection.Smart,
+  Strategies.Anchor.End,
+  Strategies.Anchor.Start,
+  Strategies.Maximal.Basic,
+  Strategies.AutoFill.CompleteLine,
+  Strategies.Validation.OversizedBlock,
 ];
 
 type SolverRunState = 'Idle' | 'Running' | 'Paused' | 'Completed' | 'Stalled' | 'Faulted';
@@ -80,14 +63,16 @@ function App() {
   const [board, setBoard] = useState<Board>(() => Board.create(Examples.small));
   const [editMode, setEditMode] = useState<EditMode>('Filling');
   const [selectedStrategyIds, setSelectedStrategyIds] = useState<string[]>(() =>
-    AVAILABLE_STRATEGIES.map((s) => s.id),
+    AVAILABLE_STRATEGIES.filter((s) => s.tier === 'working').map((s) => s.id),
   );
   const [runState, setRunState] = useState<SolverRunState>('Idle');
   const [stepCount, setStepCount] = useState<number>(0);
   const [lastResult, setLastResult] = useState<StrategyResult | null>(null);
   const [stepDelayMs, setStepDelayMs] = useState<number>(120);
+  const [hadFlawedMutations, setHadFlawedMutations] = useState<boolean>(false);
 
   const workingBoardRef = useRef<Board | null>(null);
+  const flawedMutationsRef = useRef<boolean>(false);
   const iteratorRef = useRef<Generator<
     StrategyResult.StepTaken | StrategyResult.CellChanged,
     StrategyResult,
@@ -97,6 +82,8 @@ function App() {
   const resetGeneratorSession = useCallback(() => {
     iteratorRef.current = null;
     workingBoardRef.current = null;
+    flawedMutationsRef.current = false;
+    setHadFlawedMutations(false);
     setRunState('Idle');
     setStepCount(0);
     setLastResult(null);
@@ -121,6 +108,14 @@ function App() {
     const updatedSnapshot = Board.clone(workingBoardRef.current);
     setBoard(updatedSnapshot);
     setLastResult(res.value);
+
+    if (
+      res.value.strategyName === 'Intersection.Smart' &&
+      (res.value.type === 'CellChanged' || (res.value.type === 'StepTaken' && res.value.changedCells > 0))
+    ) {
+      flawedMutationsRef.current = true;
+      setHadFlawedMutations(true);
+    }
 
     if (!res.done) {
       setStepCount((c) => c + 1);
@@ -236,6 +231,27 @@ function App() {
     setSelectedStrategyIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
+  };
+
+  const handleApplyPreset = (preset: 'sound' | 'all' | 'validation') => {
+    resetGeneratorSession();
+    if (preset === 'sound') {
+      setSelectedStrategyIds(
+        AVAILABLE_STRATEGIES.filter((s) => s.tier === 'working').map((s) => s.id),
+      );
+    } else if (preset === 'all') {
+      setSelectedStrategyIds(AVAILABLE_STRATEGIES.map((s) => s.id));
+    } else if (preset === 'validation') {
+      setSelectedStrategyIds((prev) => {
+        const valIds = AVAILABLE_STRATEGIES.filter((s) => s.tier === 'validation').map((s) => s.id);
+        const hasAllVal = valIds.every((id) => prev.includes(id));
+        if (hasAllVal) {
+          return prev.filter((id) => !valIds.includes(id));
+        } else {
+          return Array.from(new Set([...prev, ...valIds]));
+        }
+      });
+    }
   };
 
   const handleStepClick = () => {
@@ -383,7 +399,10 @@ function App() {
           <div className="panel-card">
             <h2 className="panel-title">Solver Playback</h2>
 
-            <div className="status-banner" data-status={isSolved ? 'Completed' : runState}>
+            <div
+              className={`status-banner ${runState === 'Faulted' ? 'status-banner--fault-flare' : ''}`}
+              data-status={isSolved ? 'Completed' : runState}
+            >
               <div className="status-banner__row">
                 <span className="status-badge">{isSolved ? 'Solved' : runState}</span>
                 <span className="step-counter">Steps: {stepCount}</span>
@@ -401,6 +420,11 @@ function App() {
                     }`
                   : 'Click a cell or hint to edit, or step through active strategies.'}
               </p>
+              {(runState === 'Stalled' || runState === 'Faulted') && hadFlawedMutations && (
+                <div className="status-warning-callout" role="alert">
+                  <strong>⚠️ Warning:</strong> A flawed heuristic strategy (<code>Intersection.Smart</code>) was active and modified cells in this session. Its naive greedy logic may have placed invalid cells, causing the solver to stall or fail.
+                </div>
+              )}
             </div>
 
             <div className="playback-controls">
@@ -442,7 +466,35 @@ function App() {
           </div>
 
           <div className="panel-card">
-            <h2 className="panel-title">Active Strategies</h2>
+            <div className="panel-header-row">
+              <h2 className="panel-title">Active Strategies</h2>
+              <div className="strategy-presets" role="group" aria-label="Strategy selection presets">
+                <button
+                  type="button"
+                  className="btn btn--preset"
+                  onClick={() => handleApplyPreset('sound')}
+                  title="Select only mathematically sound strategies"
+                >
+                  Sound Only
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--preset"
+                  onClick={() => handleApplyPreset('all')}
+                  title="Select all available strategies"
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--preset"
+                  onClick={() => handleApplyPreset('validation')}
+                  title="Toggle validation sanity checkers"
+                >
+                  ± Validation
+                </button>
+              </div>
+            </div>
             <p className="panel-help">
               Select one strategy to run standalone, or multiple to run via{' '}
               <code>Strategies.Orchestrator</code>.
@@ -450,10 +502,14 @@ function App() {
             <div className="strategy-list">
               {AVAILABLE_STRATEGIES.map((item) => {
                 const checked = selectedStrategyIds.includes(item.id);
+                const isFlawed = item.tier === 'flawed';
+                const isValidation = item.tier === 'validation';
                 return (
                   <label
                     key={item.id}
-                    className={`strategy-item ${checked ? 'strategy-item--active' : ''}`}
+                    className={`strategy-item ${checked ? 'strategy-item--active' : ''} ${
+                      isFlawed ? 'strategy-item--flawed' : ''
+                    } ${isValidation ? 'strategy-item--validation' : ''}`}
                   >
                     <input
                       type="checkbox"
@@ -461,8 +517,30 @@ function App() {
                       onChange={() => toggleStrategySelection(item.id)}
                     />
                     <div className="strategy-item__body">
-                      <span className="strategy-item__name">{item.label}</span>
+                      <div className="strategy-item__header">
+                        <span className="strategy-item__name">{item.label}</span>
+                        {isFlawed && (
+                          <span className="strategy-badge strategy-badge--flawed" title="Naive / Flawed Logic">
+                            ⚠️ Flawed
+                          </span>
+                        )}
+                        {isValidation && (
+                          <span className="strategy-badge strategy-badge--validation" title="Sanity Checker">
+                            🛡️ Validation
+                          </span>
+                        )}
+                        {!isFlawed && !isValidation && (
+                          <span className="strategy-badge strategy-badge--sound" title="Mathematically Sound">
+                            ✓ Sound
+                          </span>
+                        )}
+                      </div>
                       <span className="strategy-item__desc">{item.description}</span>
+                      {item.warningNote && (
+                        <span className="strategy-item__warning-note">
+                          {item.warningNote}
+                        </span>
+                      )}
                     </div>
                   </label>
                 );

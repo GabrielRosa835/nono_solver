@@ -1,6 +1,6 @@
 # Anchor.End
 
-**Last Updated**: 03/11/2026 20:32
+**Last Updated**: 08/11/2026 12:15
 
 ## Goal
 Securely identify and bound the last hint of the line.
@@ -15,9 +15,9 @@ Expects to place an `Empty` boundary cell before the last hint, or fill the trai
 **Low**: Mirrored logic of Anchor.Start, requiring only basic boundary checks.
 
 ## Codebase
-- **Status**: Planned
-- **Function**: `TBD`
-- **Parameters**: `line: BoardLine`
+- **Status**: Implemented
+- **Function**: `Anchor.End` (generator in `src/solver/strategies/Anchor.ts`)
+- **Parameters**: `board: Board`
 
 ## Observations
 Nothing to add.

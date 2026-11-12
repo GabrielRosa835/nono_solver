@@ -1,6 +1,6 @@
 # Maximal.Basic
 
-**Last Updated**: 03/11/2026 20:32
+**Last Updated**: 08/11/2026 12:15
 
 ## Goal
 Isolate and bound blocks that match the absolute largest hint in the line.
@@ -15,9 +15,9 @@ Expects to bound maximal blocks with `Empty` cells.
 **Low-Medium**: Requires scanning the entire line to match block sizes against a globally known maximum.
 
 ## Codebase
-- **Status**: Planned
-- **Function**: `TBD`
-- **Parameters**: `line: BoardLine`
+- **Status**: Implemented
+- **Function**: `Maximal.Basic` (generator in `src/solver/strategies/Maximal.ts`)
+- **Parameters**: `board: Board`
 
 ## Observations
 Nothing to add.
